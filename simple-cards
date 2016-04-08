@@ -52,7 +52,7 @@ namespace SimpleGenetic {
             else {
                stagnant++;
             }
-            Console.WriteLine(bestFit);
+            //Console.WriteLine(bestFit);
             ite++;
          }
          if(bestFit == 0) {
