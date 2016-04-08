@@ -1,0 +1,194 @@
+/*This short script uses a basic crossover and mutate algorithm with elitist selection. The population size, mutation chance, and crossover 
+length can be altered. The goal of the script is hard-coded in but any changes to input values or output goals can also be edited in the
+Program class. The script takes in cards from labeled 1-10 and splits them into two piles. The goal is for the left pile to sum to 36, 
+and the product of the right pile to be 360.*/
+
+using System;
+
+namespace SimpleGenetic {
+   class Program {
+      const Int32 PopSize = 20;
+      public static Double bestFit;
+      public static Cards[] population = new Cards[PopSize];
+      static void Main() {
+         for(Int32 i=0; i<PopSize; i++) {
+            population[i] = new Cards(36, 360);
+         }
+         bestFit = 999;
+         Evolve();
+         Console.Read();
+      }
+      public static void Evolve() {
+         Int32 stagnant = 0;
+         Int32[] shuffled;
+         Boolean changed = false;
+         Int32 ite = 0;
+         while((stagnant < 300)&&(bestFit != 0)) {
+            changed = false;
+            for(Int32 pointer = 0; pointer<PopSize-1; pointer += 2) {
+               Double fit1 = population[pointer].GetFitness();
+               Double fit2 = population[pointer + 1].GetFitness();
+               if(fit1 < bestFit) {
+                  bestFit = fit1;
+                  changed = true;
+               } 
+               if(fit2 < bestFit) {
+                  bestFit = fit2;
+                  changed = true;
+               }
+               shuffled = Shuffle(0, PopSize - 1);
+               if (population[pointer].GetFitness() < population[pointer + 1].GetFitness()) {
+                  population[pointer + 1].Crossover(population[pointer]);
+                  population[pointer + 1].Mutate();
+               }
+               else {
+                  population[pointer].Crossover(population[pointer + 1]);
+                  population[pointer].Mutate();
+               }
+            }
+            if (changed) {
+               stagnant = 0;
+            }
+            else {
+               stagnant++;
+            }
+            Console.WriteLine(bestFit);
+            ite++;
+         }
+         if(bestFit == 0) {
+            Console.WriteLine("Success!");
+            Int32 left;
+            Int32 right;
+            for(Int32 i=0; i<PopSize; i++) {
+               left = 0;
+               right = 1;
+               //Console.WriteLine(population[i].GetFitness());
+               if(population[i].GetFitness() == 0) {
+                  Console.Write("Left: ");
+                  for(Int32 j=0; j<10; j++) {
+                     if (population[i].deck[j]) {
+                        right *= (j+1);
+                     }
+                     else {
+                        Console.Write(Convert.ToString(j+1) + " ");
+                        left += (j+1);
+                     }
+                  }
+                  Console.WriteLine("; ");
+                  Console.Write("Right: ");
+                  for(Int32 j=0; j<10; j++) {
+                     if (population[i].deck[j]) {
+                        Console.Write(Convert.ToString(j+1) + " ");
+                     }
+                  }
+                  Console.WriteLine(" ");
+                  Console.WriteLine("Left: " + Convert.ToString(left) + "; Right: " + Convert.ToString(right));
+               }
+            }
+         }
+         else {
+            Console.WriteLine("Failure");
+            Console.WriteLine("Best fit was: " + Convert.ToString(bestFit));
+            Int32 left;
+            Int32 right;
+            for (Int32 i=0; i<PopSize; i++) {
+               left = 0;
+               right = 1;
+               //Console.WriteLine(population[i].GetFitness());
+               if (population[i].GetFitness() == bestFit) {
+                  Console.Write("Left: ");
+                  for (Int32 j = 0; j < 10; j++) {
+                     if (population[i].deck[j]) {
+                        right *= (j + 1);
+                     }
+                     else {
+                        Console.Write(Convert.ToString(j + 1) + " ");
+                        left += (j + 1);
+                     }
+                  }
+                  Console.WriteLine("; ");
+                  Console.Write("Right: ");
+                  for (Int32 j = 0; j < 10; j++) {
+                     if (population[i].deck[j]) {
+                        Console.Write(Convert.ToString(j + 1) + " ");
+                     }
+                  }
+                  Console.WriteLine(" ");
+                  Console.WriteLine("Left: " + Convert.ToString(left) + "; Right: " + Convert.ToString(right));
+               }
+            }
+         }
+         Console.WriteLine("Iterations: " + Convert.ToString(ite));
+         return;
+      }
+
+      public static Int32[] Shuffle(Int32 lower = 0, Int32 upper = 0) {
+         Int32[] shuffled = new Int32[upper - lower + 1];
+         Int32[] sampleSpace = new Int32[upper - lower + 1];
+         Int32 pointer = upper - lower;
+         for (Int32 i=0; i<upper-lower+1; i++) {
+            sampleSpace[i] = i + lower;
+         }
+         Int32 hold;
+         Int32 ind;
+         for(Int32 sample=0; sample<upper-lower+1; sample++) {
+            ind = Cards.rng.Next(0, upper - lower + 1);
+            hold = sampleSpace[pointer];
+            sampleSpace[pointer] = sampleSpace[ind];
+            sampleSpace[ind] = hold;
+            shuffled[sample] = sampleSpace[pointer];
+            pointer--;
+         }
+         return shuffled;
+      }
+
+   }
+
+   public class Cards {
+      const Double mutateChance = 0.3;
+      const Int32 crossoverSize = 2;
+      public static Random rng = new Random();
+      public Double fitness;
+      public Boolean[] deck = new Boolean[10];
+      private Double req1, req2;
+      public Cards(Int32 left, Int32 right) {
+         for(Int32 i=0; i<10; i++) {
+            if(rng.NextDouble() > 0.5) {
+               deck[i] = true;
+            }
+         }
+         req1 = left;
+         req2 = right;
+         return;
+      }
+      public Double GetFitness() {
+         Int32 left = 0;
+         Int32 right = 1;
+         for(Int32 i=0; i<10; i++) {
+            if (deck[i]) {
+               right *= (i+1);
+            }
+            else {
+               left += (i+1);
+            }
+         }
+         fitness = Math.Abs(req1 - left) / req1 + Math.Abs(req2 - right) / req2;
+         return fitness;
+      }
+      public void Crossover(Cards winner) {
+         Int32 startIndex = rng.Next(0, 10);
+         for(Int32 i=0; i<crossoverSize; i++) {
+            deck[(i + startIndex) % 10] = winner.deck[(i + startIndex) % 10];
+         }
+         return;
+      }
+      public void Mutate() {
+         for(Int32 i=0; i<10; i++) {
+            if (rng.NextDouble() < mutateChance) {
+               deck[i] = !deck[i];
+            }
+         }
+         return;
+      }
+   }
+}
